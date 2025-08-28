@@ -1,0 +1,12 @@
+[package]
+name = "myml"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "myml"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rand = "0.9"
+pyo3 = { version = "0.25.1", features = ["extension-module"] }
