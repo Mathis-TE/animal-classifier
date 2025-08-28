@@ -90,6 +90,44 @@ impl Network {
         }
     }
 
+    //MSE
+// Dans #[pymethods] impl Network
+pub fn train_return_mse(&mut self, inputs: Vec<Vec<f64>>, targets: Vec<Vec<f64>>, epochs: u16) -> Vec<f64> {
+    if (inputs.len() != targets.len()) || (inputs.is_empty()) {
+        panic!("Inputs and targets must have the same length and should not be empty");
+    }
+
+    let n_inputs = inputs.len() as f64;
+    let n_targets = targets[0].len() as f64;
+    let mut history = Vec::with_capacity(epochs as usize);
+
+    let step = (epochs / 100).max(1);
+
+    for e in 1..=epochs {
+        let mut sum_squared_errors = 0.0;
+
+        for j in 0..inputs.len() {
+            let outputs = self.feed_forward(inputs[j].clone());
+
+            for (out, targ) in outputs.iter().zip(targets[j].iter()) {
+                let diff = targ - out;
+                sum_squared_errors += diff * diff;
+            }
+            self.back_propagate(outputs, targets[j].clone());
+        }
+
+        let mse = sum_squared_errors / (n_inputs * n_targets);
+        history.push(mse);
+
+        if epochs <= 100 || e % step == 0 {
+            println!("Epoch {e} / {epochs} - MSE: {mse:.6}");
+        }
+    }
+
+    history
+}
+
+
     /// Retourne les dimensions des couches
     pub fn layers(&self) -> Vec<usize>{
         self.layers.clone()
