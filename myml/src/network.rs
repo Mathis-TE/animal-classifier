@@ -3,7 +3,7 @@ use pyo3::exceptions::PyValueError;
 
 use std::vec;
 
-use super::activation::{Activation, ActivationKind, SIGMOID, TANH, RELU};
+use super::activation::{Activation, ActivationKind, SIGMOID, TANH};
 use super::matrix::Matrix;
 
 #[pyclass]
@@ -29,13 +29,11 @@ impl Network {
         let kind = match activation_kind.unwrap_or(0){
             0 => ActivationKind::Sigmoid,
             1 => ActivationKind::Tanh,
-            2 => ActivationKind::Relu,
             _ => panic!("Invalid activation kind"),
         };
         let act = match kind {
             ActivationKind::Sigmoid => SIGMOID,
             ActivationKind::Tanh => TANH,
-            ActivationKind::Relu => RELU,
         };
 
         let mut weights = vec![];
@@ -152,13 +150,11 @@ pub fn train_return_mse(&mut self, inputs: Vec<Vec<f64>>, targets: Vec<Vec<f64>>
         self.activation_kind = match id {
             0 => ActivationKind::Sigmoid,
             1 => ActivationKind::Tanh,
-            2 => ActivationKind::Relu,
             _ => return Err(PyValueError::new_err("Invalid activation kind")),
         };
         self.activation = match self.activation_kind {
             ActivationKind::Sigmoid => SIGMOID,
             ActivationKind::Tanh    => TANH,
-            ActivationKind::Relu    => RELU,
         };
         Ok(())
     
