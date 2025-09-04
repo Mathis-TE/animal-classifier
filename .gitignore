@@ -1,2 +1,5 @@
 myml/target/*
 *.venv/
+dataset*
+*vscode/*
+*__pycache__/

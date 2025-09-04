@@ -3,7 +3,7 @@ use pyo3::exceptions::PyValueError;
 
 use std::vec;
 
-use super::activation::{Activation, ActivationKind, SIGMOID, TANH};
+use super::activation::{Activation, ActivationId, SIGMOID, TANH, RELU};
 use super::matrix::Matrix;
 
 #[pyclass]
@@ -15,25 +15,27 @@ pub struct Network {
     learning_rate: f64,
     activation: Activation,
     //on choisit la fonction d'activation (Sigmoid, tanh ou relu)
-    activation_kind: ActivationKind,
+    activation_id: ActivationId,
 }
 #[pymethods]
 impl Network {
-    //retourne un type générique
+
     #[new]
-    pub fn new(layers: Vec<usize>, learning_rate: f64, activation_kind: Option<u8>) -> Network {
+    pub fn new(layers: Vec<usize>, learning_rate: f64, activation_id: Option<u8>) -> Network {
         if layers.len() < 2 {
             panic!("Network must have at least 2 layers");
         }
 
-        let kind = match activation_kind.unwrap_or(0){
-            0 => ActivationKind::Sigmoid,
-            1 => ActivationKind::Tanh,
-            _ => panic!("Invalid activation kind"),
+        let id = match activation_id.unwrap_or(0){
+            0 => ActivationId::Sigmoid,
+            1 => ActivationId::Tanh,
+            2 => ActivationId::Relu,
+            _ => panic!("Invalid activation id"),
         };
-        let act = match kind {
-            ActivationKind::Sigmoid => SIGMOID,
-            ActivationKind::Tanh => TANH,
+        let act = match id {
+            ActivationId::Sigmoid => SIGMOID,
+            ActivationId::Tanh => TANH,
+            ActivationId::Relu => RELU,
         };
 
         let mut weights = vec![];
@@ -52,7 +54,7 @@ impl Network {
             data: vec![],
             learning_rate,
             activation: act,
-            activation_kind: kind,
+            activation_id: id,
         }
     }
 
@@ -75,55 +77,41 @@ impl Network {
     }
 
 
+    pub fn train(&mut self, inputs: Vec<Vec<f64>>, targets: Vec<Vec<f64>>, epochs: u16) -> Vec<f64> {
+        if (inputs.len() != targets.len()) || (inputs.is_empty()) {
+            panic!("Inputs and targets must have the same length and should not be empty");
+        }
 
-    pub fn train(&mut self, inputs: Vec<Vec<f64>>, targets: Vec<Vec<f64>>, epochs: u16){
-        for i in 1..=epochs{
-            if epochs < 100 || i % (epochs / 100) == 0{
-                println!("Epoch {} of {}", i, epochs);
-            }
-            for j in 0..inputs.len(){
+        let n_inputs = inputs.len() as f64;
+        let n_targets = targets[0].len() as f64;
+        let mut history = Vec::with_capacity(epochs as usize);
+
+        let step = (epochs / 100).max(1);
+
+        for e in 1..=epochs {
+            let mut sum_squared_errors = 0.0;
+
+            for j in 0..inputs.len() {
                 let outputs = self.feed_forward(inputs[j].clone());
+
+                for (out, targ) in outputs.iter().zip(targets[j].iter()) {
+                    let diff = targ - out;
+                    sum_squared_errors += diff * diff;
+                }
                 self.back_propagate(outputs, targets[j].clone());
             }
-        }
-    }
 
-    //MSE
-// Dans #[pymethods] impl Network
-pub fn train_return_mse(&mut self, inputs: Vec<Vec<f64>>, targets: Vec<Vec<f64>>, epochs: u16) -> Vec<f64> {
-    if (inputs.len() != targets.len()) || (inputs.is_empty()) {
-        panic!("Inputs and targets must have the same length and should not be empty");
-    }
+            let mse = sum_squared_errors / (n_inputs * n_targets);
+            history.push(mse);
 
-    let n_inputs = inputs.len() as f64;
-    let n_targets = targets[0].len() as f64;
-    let mut history = Vec::with_capacity(epochs as usize);
-
-    let step = (epochs / 100).max(1);
-
-    for e in 1..=epochs {
-        let mut sum_squared_errors = 0.0;
-
-        for j in 0..inputs.len() {
-            let outputs = self.feed_forward(inputs[j].clone());
-
-            for (out, targ) in outputs.iter().zip(targets[j].iter()) {
-                let diff = targ - out;
-                sum_squared_errors += diff * diff;
+            if epochs <= 100 || e % step == 0 {
+                println!("Epoch {e} / {epochs} - MSE: {mse:.6}");
+                continue;
             }
-            self.back_propagate(outputs, targets[j].clone());
         }
 
-        let mse = sum_squared_errors / (n_inputs * n_targets);
-        history.push(mse);
-
-        if epochs <= 100 || e % step == 0 {
-            println!("Epoch {e} / {epochs} - MSE: {mse:.6}");
-        }
+        history
     }
-
-    history
-}
 
 
     /// Retourne les dimensions des couches
@@ -142,22 +130,93 @@ pub fn train_return_mse(&mut self, inputs: Vec<Vec<f64>>, targets: Vec<Vec<f64>>
     }
 
     /// Retourne l'ID de l'activation pour ne pas mettre en string
-    pub fn activation_kind(&self) -> u8 {
-        self.activation_kind as u8
+    pub fn activation_id(&self) -> u8 {
+        self.activation_id as u8
     }
 
-    pub fn set_activation_kind(&mut self, id: u8) -> PyResult<()> {
-        self.activation_kind = match id {
-            0 => ActivationKind::Sigmoid,
-            1 => ActivationKind::Tanh,
-            _ => return Err(PyValueError::new_err("Invalid activation kind")),
+    pub fn set_activation_id(&mut self, id: u8) -> PyResult<()> {
+        self.activation_id = match id {
+            0 => ActivationId::Sigmoid,
+            1 => ActivationId::Tanh,
+            2 => ActivationId::Relu,
+            _ => return Err(PyValueError::new_err("Invalid activation id")),
         };
-        self.activation = match self.activation_kind {
-            ActivationKind::Sigmoid => SIGMOID,
-            ActivationKind::Tanh    => TANH,
+        self.activation = match self.activation_id {
+            ActivationId::Sigmoid => SIGMOID,
+            ActivationId::Tanh    => TANH,
+            ActivationId::Relu    => RELU,
         };
         Ok(())
     
+    }
+
+    pub fn get_state(&self) -> (
+        Vec<usize>,             //layers
+        f64,                    //leaning_rate
+        u8,                     //activation id
+        Vec<Vec<Vec<f64>>>,     //weights
+        Vec<Vec<Vec<f64>>>,     //biases
+
+    ){
+        let w: Vec<Vec<Vec<f64>>> = self.weights.iter().map(|m| m.data.clone()).collect();
+        let b: Vec<Vec<Vec<f64>>> = self.biases.iter().map(|m| m.data.clone()).collect();
+
+        (
+            self.layers.clone(),
+            self.learning_rate,
+            self.activation_id as u8,
+            w,
+            b,
+        )
+    }
+    #[staticmethod]
+    pub fn from_state(
+        layers: Vec<usize>,
+        learning_rate: f64,
+        activation_id: u8,
+        weights: Vec<Vec<Vec<f64>>>,
+        biases: Vec<Vec<Vec<f64>>>,
+    ) -> PyResult<Self> {
+        if layers.len() < 2 {
+            return Err(PyValueError::new_err("layers must have at least 2 entries"));
+        }
+        if weights.len() != layers.len()-1 || biases.len() != layers.len()-1 {
+            return Err(PyValueError::new_err("weights/biases length mismatch with layers"));
+        }
+
+        
+        let (id, act) = match activation_id {
+            0 => (ActivationId::Sigmoid, SIGMOID),
+            1 => (ActivationId::Tanh,    TANH),
+            2 => (ActivationId::Relu,    RELU),
+            _ => return Err(PyValueError::new_err("Invalid activation")),
+        };
+
+        let mut w_mat = Vec::with_capacity(weights.len());
+        let mut b_mat = Vec::with_capacity(biases.len());
+        for i in 0..weights.len() {
+            let wi = &weights[i];
+            if wi.len() != layers[i+1] || wi[0].len() != layers[i] {
+                return Err(PyValueError::new_err(format!("weight[{i}] has wrong shape (expected {}x{})", layers[i+1], layers[i])));
+            }
+            w_mat.push(Matrix::from(wi.clone()));
+
+            let bi = &biases[i];
+            if bi.len() != layers[i+1] || bi[0].len() != 1 {
+                return Err(PyValueError::new_err(format!("bias[{i}] has wrong shape (expected {}x1)", layers[i+1])));
+            }
+            b_mat.push(Matrix::from(bi.clone()));
+        }
+
+        Ok(Self {
+            layers,
+            weights: w_mat,
+            biases: b_mat,
+            data: vec![],
+            learning_rate,
+            activation: act,
+            activation_id: id,
+        })
     }
 
 }
@@ -172,22 +231,31 @@ impl Network {
         let parsed = Matrix::from(vec![outputs]).transpose();
         let targets = Matrix::from(vec![targets]).transpose();
 
-        let mut errors = targets.subtract(&parsed);
-        let mut gradients = parsed.map(&self.activation.derivative);
+        let errors = targets.subtract(&parsed);
+        let derivative_act = parsed.map(&self.activation.derivative);
+        let mut delta = derivative_act.dot_multiply(&errors);
 
         for i in (0..self.layers.len()-1).rev(){
-            gradients = gradients
-                            .dot_multiply(&errors)
-                            .map(&|x| x * self.learning_rate);
+            let grad_w = delta
+                        .multiply(&self.data[i].transpose());
+
+
+            let prop_errors = self.weights[i].transpose().multiply(&delta);
 
             self.weights[i] = self.weights[i]
-                                .add(&gradients
-                                .multiply(&self.data[i].transpose()));
+                                .add(&grad_w
+                                .map(&|x| x * self.learning_rate
+                                ));
 
-            self.biases[i] = self.biases[i].add(&gradients);
-            //on va multiplier les erreurs avec les poids 
-            errors = self.weights[i].transpose().multiply(&errors);
-            gradients = self.data[i].map(&self.activation.derivative);
+            self.biases[i]  = self.biases[i]
+                                .add(&delta
+                                .map(&|x| x * self.learning_rate
+                                ));
+
+            if i > 0 {
+                let dact_prev = self.data[i].map(&self.activation.derivative);
+                delta = dact_prev.dot_multiply(&prop_errors);   
+            }
 
         }
     }

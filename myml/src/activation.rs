@@ -8,9 +8,10 @@ pub struct Activation {
 
 #[repr(u8)]
 #[derive(Clone,Copy)]
-pub enum ActivationKind {
+pub enum ActivationId {
     Sigmoid = 0,
     Tanh = 1,
+    Relu = 2,
 }
 
 #[inline]
@@ -33,6 +34,14 @@ fn d_tanh(x:f64) -> f64 {
     1.0 - x.tanh().powi(2)
 }
 
+#[inline]
+fn relu(x:f64) -> f64 {
+    if x > 0.0 { x } else { 0.0 }
+}
+#[inline]
+fn d_relu(x:f64) -> f64 {
+    if x > 0.0 { 1.0 } else { 0.0 }
+}
 
 
 pub const SIGMOID: Activation = Activation {
@@ -43,4 +52,9 @@ pub const SIGMOID: Activation = Activation {
 pub const TANH: Activation = Activation {
     function: tanh,
     derivative: d_tanh,
+};
+
+pub const RELU: Activation = Activation {
+    function: relu,
+    derivative: d_relu,
 };

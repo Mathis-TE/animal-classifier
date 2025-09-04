@@ -32,7 +32,7 @@ fn main(){
     println!("1 and 1: {:?}", network.feed_forward(vec![1.0, 1.0]));
 
     let epochs = 2_000;
-    let hist = network.train_return_mse(inputs.clone(), targets.clone(), epochs);
+    let hist = network.train(inputs.clone(), targets.clone(), epochs);
 
     // Affichages utiles
     println!("Epochs: {}", hist.len());
