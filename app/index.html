@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MyML · Démo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    img.preview { max-width: 100%; max-height: 260px; display:block; }
+    pre { background:#f8f9fa; padding:8px; border-radius:.5rem; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand bg-light border-bottom">
+    <div class="container">
+      <a class="navbar-brand" href="#">MyML</a>
+      <div class="ms-auto small text-secondary">Démo — modèle pré-entraîné</div>
+    </div>
+  </nav>
+
+  <main class="container my-4">
+    <div class="mb-4">
+      <label class="form-label">Image à classer</label>
+      <input id="file" type="file" accept="image/*" class="form-control mb-2">
+      <div class="d-flex gap-2">
+        <button id="btnPredict" class="btn btn-primary" disabled>Classifier</button>
+        <button id="btnReset" class="btn btn-outline-secondary">Réinitialiser</button>
+        <div id="status" class="align-self-center text-secondary small"></div>
+      </div>
+      <img id="preview" class="preview mt-3 d-none" alt="aperçu">
+    </div>
+
+    <div class="mb-4">
+      <div class="d-flex align-items-center gap-2">
+        <h5 class="m-0">Prédiction</h5>
+        <span id="predBadge" class="badge text-bg-secondary">—</span>
+      </div>
+      <div id="probs" class="mt-3"></div>
+      <details class="mt-3">
+        <summary>JSON (probas / logits / arch)</summary>
+        <pre id="jsonOut">—</pre>
+      </details>
+    </div>
+
+    <div class="mb-4">
+      <h5>Modèle</h5>
+      <div class="row g-2">
+        <div class="col-6 col-md-3"><div class="text-secondary small">Type</div><div id="modelType">—</div></div>
+        <div class="col-6 col-md-3"><div class="text-secondary small">Couches</div><div id="modelDepth">—</div></div>
+        <div class="col-12 col-md-6"><div class="text-secondary small">Arch</div><div id="modelArch">—</div></div>
+      </div>
+    </div>
+
+    <div id="err" class="text-danger small"></div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script defer src="./script.js"></script>
+</body>
+</html>

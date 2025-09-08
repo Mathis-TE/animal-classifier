@@ -10,17 +10,17 @@ import matplotlib.pyplot as plt
 
 
 DATASET_PATH = Path(r"H:\ESGI\L3\S2\PA2\dataset_1")
-HIDDEN_LAYERS       = [128,64,31,16]                      # nombre couche cachée et neurones par couche
+HIDDEN_LAYERS       = [16]                      # nombre couche cachée et neurones par couche
 LR           = 0.01                                 # learning rate
 ACT          = "sigmoid"                            # "tanh" ou "sigmoid ou relu"
-EPOCHS       = 200                                  # nb total d'epochs
+EPOCHS       = 120                                  # nb total d'epochs
 BLOCK        = 10                                   # nb d'epochs par appel Rust <=> Python
 LOG_EVERY    = 5                                    # fréquence d'affichage des métriques
 SEED         = 42
 
 CLASSES = ["owl", "squirrel", "fox"]
 EXTS = {".jpg", ".jpeg", ".png"}
-SIZE=(64,64)
+SIZE=(24,24)
 
 
 # Sauvegarde de notre modèle
@@ -128,9 +128,9 @@ def run():
     best_mse = float('inf')
     best_epoch = -1
 
-    choose_metric = "acc"
+    metric = "mse"
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    best_model_path = SAVE_DIR / f"best_{choose_metric}_{stamp}.json.gz"
+    best_model_path = SAVE_DIR / f"best_{metric}_{stamp}.json.gz"
     # Entraînement
     done = 0
     for start in tqdm(range(0, EPOCHS, BLOCK), desc="Training", leave=True):
@@ -161,7 +161,7 @@ def run():
             )
     
             improved = False
-            if choose_metric == "acc":
+            if metric == "acc":
                 if acc_val > best_acc:
                     best_acc = acc_val
                     best_mse = mse_val
@@ -176,11 +176,12 @@ def run():
 
             if improved:
                 save_state_tuple(net, best_model_path)
-                tqdm.write(f"✓ saved best ({choose_metric}) at epoch {best_epoch} → {best_model_path.name}")
+                tqdm.write(f"Saved best ({metric}) at epoch {best_epoch} -> {best_model_path.name}")
 
 
     print("Hyperparameters:",
           f"hidden={HIDDEN_LAYERS} | lr={LR} | act={ACT} | epochs={EPOCHS} | block={BLOCK} ")
+    print(f"Saved best ({metric}) at epoch {best_epoch} -> {best_model_path.name}")
     print(f"\nFinal → MSE(tr)={mse_tr_hist[-1]:.4e} "
           f"\n MSE(val)={mse_eval(net, images_val, labels_val):.4e} "
           f"\n acc(tr)={accuracy(net, images_train, labels_train):.3f} "
@@ -206,3 +207,5 @@ def run():
 
 if __name__=="__main__":
     run()
+
+ 
